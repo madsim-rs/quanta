@@ -539,7 +539,7 @@ fn mul_div_po2_u64(value: u64, numer: u64, denom: u32) -> u64 {
 }
 
 #[allow(dead_code)]
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", not(madsim)))]
 fn has_tsc_support() -> bool {
     let cpuid = raw_cpuid::CpuId::new();
     let has_invariant_tsc = cpuid
@@ -553,7 +553,7 @@ fn has_tsc_support() -> bool {
 }
 
 #[allow(dead_code)]
-#[cfg(not(all(target_arch = "x86_64", target_feature = "sse2")))]
+#[cfg(not(all(target_arch = "x86_64", target_feature = "sse2", not(madsim))))]
 fn has_tsc_support() -> bool {
     false
 }
