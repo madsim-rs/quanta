@@ -1,8 +1,9 @@
 [package]
 name = "quanta"
-version = "0.10.1"
+version = "0.11.0"
 authors = ["Toby Lawrence <toby@nuclearfurnace.com>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.60"
 
 license = "MIT"
 
@@ -26,6 +27,10 @@ bench = false
 name = "timing"
 harness = false
 
+[[bench]]
+name = "contention"
+harness = false
+
 [features]
 default = ["flaky_tests"]
 flaky_tests = []
@@ -33,7 +38,7 @@ prost = ["prost-types"]
 
 [dependencies]
 once_cell = "1.4"
-prost-types = { version = "0.8", optional = true }
+prost-types = { version = "0.11", default-features = false, optional = true }
 crossbeam-utils = "0.8.5"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
@@ -46,10 +51,10 @@ raw-cpuid = "10.2"
 libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-mach = "0.3"
+mach2 = "0.4"
 
 [target.'cfg(target_os = "ios")'.dependencies]
-mach = "0.3"
+mach2 = "0.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["profileapi"] }
@@ -58,7 +63,7 @@ winapi = { version = "0.3", features = ["profileapi"] }
 web-sys = { version = "0.3", features = ["Window", "Performance"] }
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "wasi"))'.dependencies]
-wasi = "0.10"
+wasi = "0.11"
 
 [dev-dependencies]
 average = "0.13"
