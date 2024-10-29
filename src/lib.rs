@@ -539,26 +539,6 @@ fn mul_div_po2_u64(value: u64, numer: u64, denom: u32) -> u64 {
     v as u64
 }
 
-#[allow(dead_code)]
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", not(madsim)))]
-fn has_tsc_support() -> bool {
-    let cpuid = raw_cpuid::CpuId::new();
-    let has_invariant_tsc = cpuid
-        .get_advanced_power_mgmt_info()
-        .map_or(false, |apm| apm.has_invariant_tsc());
-    let has_rdtscp = cpuid
-        .get_extended_processor_and_feature_identifiers()
-        .map_or(false, |epf| epf.has_rdtscp());
-
-    has_invariant_tsc && has_rdtscp
-}
-
-#[allow(dead_code)]
-#[cfg(not(all(target_arch = "x86_64", target_feature = "sse2", not(madsim))))]
-fn has_tsc_support() -> bool {
-    false
-}
-
 #[cfg(test)]
 pub mod tests {
     use super::{Clock, Counter, Monotonic};
