@@ -148,6 +148,7 @@ use once_cell::sync::OnceCell;
 
 mod clocks;
 use self::clocks::{Counter, Monotonic};
+mod detection;
 mod mock;
 pub use self::mock::{IntoNanoseconds, Mock};
 mod instant;
@@ -201,7 +202,7 @@ impl Calibration {
             ref_time: 0,
             src_time: 0,
             scale_factor: 1,
-            scale_shift: 1,
+            scale_shift: 0,
         }
     }
 
@@ -314,8 +315,8 @@ impl Clock {
     /// Support for TSC, etc, are checked at the time of creation, not compile-time.
     pub fn new() -> Clock {
         let reference = Monotonic::default();
-        let inner = if has_tsc_support() {
-            let source = Counter::default();
+        let inner = if detection::has_counter_support() {
+            let source = Counter;
             let calibration = GLOBAL_CALIBRATION.get_or_init(|| {
                 let mut calibration = Calibration::new();
                 calibration.calibrate(reference, &source);
@@ -388,29 +389,46 @@ impl Clock {
         Instant(scaled)
     }
 
-    /// Calculates the delta between two measurements, and scales to reference time.
+    /// Calculates the delta, in nanoseconds, between two raw measurements.
     ///
-    /// This method is slightly faster when you know you need the delta between two raw
-    /// measurements, or a start/end measurement, than using [`scaled`] for both conversions.
+    /// This method is very similar to [`delta`] but reduces overhead
+    /// for high-frequency measurements that work with nanosecond
+    /// counts internally, as it avoids the conversion of the delta
+    /// into [`Duration`].
     ///
-    /// [`scaled`]: Clock::scaled
-    pub fn delta(&self, start: u64, end: u64) -> Duration {
+    /// [`delta`]: Clock::delta
+    pub fn delta_as_nanos(&self, start: u64, end: u64) -> u64 {
         // Safety: we want wrapping_sub on the end/start delta calculation so that two measurements
         // split across a rollover boundary still return the right result.  However, we also know
         // the TSC could potentially give us different values between cores/sockets, so we're just
         // doing our due diligence here to make sure we're not about to create some wacky duration.
         if end <= start {
-            return Duration::new(0, 0);
+            return 0;
         }
 
         let delta = end.wrapping_sub(start);
-        let scaled = match &self.inner {
+        match &self.inner {
             ClockType::Counter(_, _, calibration) => {
                 mul_div_po2_u64(delta, calibration.scale_factor, calibration.scale_shift)
             }
             _ => delta,
-        };
-        Duration::from_nanos(scaled)
+        }
+    }
+
+    /// Calculates the delta between two raw measurements.
+    ///
+    /// This method is slightly faster when you know you need the delta between two raw
+    /// measurements, or a start/end measurement, than using [`scaled`] for both conversions.
+    ///
+    /// In code that simply needs access to the whole number of nanoseconds
+    /// between the two measurements, consider [`Clock::delta_as_nanos`]
+    /// instead, which is slightly faster than having to call both this method
+    /// and [`Duration::as_nanos`].
+    ///
+    /// [`scaled`]: Clock::scaled
+    /// [`delta_as_nanos`]: Clock::delta_as_nanos
+    pub fn delta(&self, start: u64, end: u64) -> Duration {
+        Duration::from_nanos(self.delta_as_nanos(start, end))
     }
 
     /// Gets the most recent current time, scaled to reference time.
@@ -420,14 +438,12 @@ impl Clock {
     /// read directly without the need to scale to reference time.
     ///
     /// The upkeep thread must be started in order to update the time.  You can read the
-    /// documentation for [`Upkeep`][upkeep] for more information on starting the upkeep thread, as
+    /// documentation for [`Upkeep`] for more information on starting the upkeep thread, as
     /// well as the details of the "current time" mechanism.
     ///
     /// If the upkeep thread has not been started, the return value will be `0`.
     ///
     /// Returns an [`Instant`].
-    ///
-    /// [upkeep]: crate::Upkeep
     pub fn recent(&self) -> Instant {
         match &self.inner {
             ClockType::Mock(mock) => Instant(mock.value()),
@@ -521,26 +537,6 @@ fn mul_div_po2_u64(value: u64, numer: u64, denom: u32) -> u64 {
     v *= u128::from(numer);
     v >>= denom;
     v as u64
-}
-
-#[allow(dead_code)]
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", not(madsim)))]
-fn has_tsc_support() -> bool {
-    let cpuid = raw_cpuid::CpuId::new();
-    let has_invariant_tsc = cpuid
-        .get_advanced_power_mgmt_info()
-        .map_or(false, |apm| apm.has_invariant_tsc());
-    let has_rdtscp = cpuid
-        .get_extended_processor_and_feature_identifiers()
-        .map_or(false, |epf| epf.has_rdtscp());
-
-    has_invariant_tsc && has_rdtscp
-}
-
-#[allow(dead_code)]
-#[cfg(not(all(target_arch = "x86_64", target_feature = "sse2", not(madsim))))]
-fn has_tsc_support() -> bool {
-    false
 }
 
 #[cfg(test)]

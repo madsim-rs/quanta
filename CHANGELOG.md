@@ -8,6 +8,50 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] - ReleaseDate
 
+## [0.12.3] - 2024-03-31
+
+### Changed
+
+- Disabled counter support on iOS targets even if AArch64 is present. This is due to an issue where
+  the necessary CPU instruction for reading the counter is not available on iOS.
+
+## [0.12.2] - 2023-12-31
+
+### Fixed
+
+- Fixed an issue with the monotonic clock for macOS/iOS where it would undermeasure time compared to
+  what would be measured by `std::time::Instant` due to using a clock source that did not account
+  for device sleep. ([#97](https://github.com/metrics-rs/quanta/pull/97))
+
+## [0.12.1] - 2023-10-31
+
+### Fixed
+
+- Populate global recent time before `Upkeep` starts. ([#95])
+
+[#95]: https://github.com/metrics-rs/quanta/pull/95
+
+## [0.12.0] - 2023-10-04
+
+### Added
+
+- Experimental support for ARM. ([#91])
+
+[#91]: https://github.com/metrics-rs/quanta/pull/91 
+
+### Changed
+
+- Update `raw-cpuid` to 11.0.
+
+## [0.11.1] - 2023-05-28
+
+### Added
+
+- Added a new method, `Clock::delta_as_nanos`, for getting the delta between two raw measurements as
+  the whole number of nanoseconds instead of the initial conversion to `Duration`. ([#86])
+
+[#86]: https://github.com/metrics-rs/quanta/pull/86
+
 ## [0.11.0] - 2023-03-24
 
 ### Added
@@ -209,7 +253,12 @@ description for the finer details.  All changes below are part of the aforementi
 - Initial commit.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/metrics-rs/quanta/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/metrics-rs/quanta/compare/v0.12.3...HEAD
+[0.12.3]: https://github.com/metrics-rs/quanta/compare/v0.12.2...v0.12.3
+[0.12.2]: https://github.com/metrics-rs/quanta/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/metrics-rs/quanta/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/metrics-rs/quanta/compare/v0.11.1...v0.12.0
+[0.11.1]: https://github.com/metrics-rs/quanta/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/metrics-rs/quanta/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/metrics-rs/quanta/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/metrics-rs/quanta/releases/tag/v0.10.0
